@@ -1,0 +1,40 @@
+#!/bin/sh
+
+echo Code Formatting start
+
+# To get the main directory
+MAIN_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+IDE_DIR="$MAIN_DIR/../../ide"
+
+FILES=$(git diff --cached --name-only --diff-filter=ACMR "*.java" | sed 's| |\\ |g')
+if [ ! -z "$FILES" ] 
+then
+  MVN_INCLUDES=$(echo $FILES | tr " " ",")
+  mvn -f $IDE_DIR/pom.xml formatter:format "-DsourceDirectory=`pwd`" "-Dformatter.includes=$MVN_INCLUDES" "-DbaseDirectory=`pwd`"
+  if [ $? -ne 0 ]
+  then 
+    exit -1
+  fi
+
+  # Add back the formatted files to staging
+  echo "$FILES" | xargs git add
+fi
+
+FILES=$(git diff --cached --name-only --diff-filter=ACMR "*.js" "*.jsx" "*.css" | sed 's| |\\ |g')
+if [ ! -z "$FILES" ]
+then
+  # Prettify all selected files
+  echo "$FILES" | xargs npx prettier --write
+
+  if [ $? -ne 0 ]
+  then 
+    exit -1
+  fi
+
+  # Add back the formatted files to staging
+  echo "$FILES" | xargs git add
+fi
+
+echo "Code Formatting end"
+exit 0
+
